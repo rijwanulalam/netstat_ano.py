@@ -1,0 +1,15 @@
+IP Address      Country   Malicious  Suspicious  Status         
+----------------------------------------------------------------
+172.172.255.216 US        0          0           Clean          
+35.237.69.59    US        0          0           Clean          
+35.203.65.95    CA        0          0           Clean          
+91.108.56.182   SG        0          0           Clean          
+20.42.65.88     US        0          0           Clean          
+4.224.4.14      IN        0          0           Clean          
+18.67.110.118   US        0          0           Clean          
+150.171.109.25  US        0          0           Clean          
+52.123.252.231  AU        0          0           Clean          
+18.97.36.71     US        0          0           Clean          
+52.147.65.166   JP        0          0           Clean          
+101.47.154.30   SG        0          0           Clean          
+52.123.128.14   US        0          0           Clean          
