@@ -1,0 +1,40 @@
+2026-09-28 15:54:04  ERROR: VT_API_KEY environment variable is not set.
+2026-09-28 16:02:55  Lookup failed for 101.47.154.32 (HTTP 401); will retry next run.
+2026-09-28 16:03:11  Lookup failed for 104.18.39.21 (HTTP 401); will retry next run.
+2026-09-28 16:03:28  Lookup failed for 140.82.114.25 (HTTP 401); will retry next run.
+2026-09-28 16:03:44  Lookup failed for 172.172.255.217 (HTTP 401); will retry next run.
+2026-09-28 16:04:01  Lookup failed for 18.97.36.66 (HTTP 401); will retry next run.
+2026-09-28 16:04:17  Lookup failed for 35.201.127.49 (HTTP 401); will retry next run.
+2026-09-28 16:04:33  Lookup failed for 35.237.69.59 (HTTP 401); will retry next run.
+2026-09-28 16:04:50  Lookup failed for 4.150.223.101 (HTTP 401); will retry next run.
+2026-09-28 16:05:06  Lookup failed for 4.224.116.131 (HTTP 401); will retry next run.
+2026-09-28 16:05:23  Lookup failed for 4.237.22.41 (HTTP 401); will retry next run.
+2026-09-28 16:05:39  Lookup failed for 52.175.141.53 (HTTP 401); will retry next run.
+2026-09-28 16:05:56  Lookup failed for 72.154.7.110 (HTTP 401); will retry next run.
+2026-09-28 16:06:12  Lookup failed for 91.108.56.182 (HTTP 401); will retry next run.
+2026-09-28 16:06:12  Scan done: 13 public IPs now, 13 looked up, 13 rows written.
+2026-09-28 16:06:15  Git push FAILED: To https://github.com/rijwanulalam/netstat_ano.py.git
+ ! [rejected]        main -> main (fetch first)
+error: failed to push some refs to 'https://github.com/rijwanulalam/netstat_ano.py.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+2026-09-28 16:16:35  Scan done: 13 public IPs now, 13 looked up, 17 rows written.
+2026-09-28 16:16:37  Git push FAILED: To https://github.com/rijwanulalam/netstat_ano.py.git
+ ! [rejected]        main -> main (fetch first)
+error: failed to push some refs to 'https://github.com/rijwanulalam/netstat_ano.py.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+2026-09-28 16:26:39  Scan done: 17 public IPs now, 9 looked up, 25 rows written.
+2026-09-28 16:26:41  Pushed new results to GitHub.
+2026-09-28 16:45:10  Scan done: 15 public IPs now, 5 looked up, 29 rows written.
+2026-09-28 16:45:16  Pushed new results to GitHub.
+2026-09-28 17:10:54  Scan done: 24 public IPs now, 17 looked up, 46 rows written.
+2026-09-28 17:10:59  Pushed new results to GitHub.
+2026-09-28 17:16:01  Scan done: 17 public IPs now, 8 looked up, 54 rows written.
+2026-09-28 17:16:07  Pushed new results to GitHub.

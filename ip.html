@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>exIPcheck — Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#12161C;--p:#181D25;--p2:#1E2530;--line:#2A3240;--t:#E7ECF2;--d:#8B97A8;--cy:#5EEAD4;--am:#F5A623;--rd:#F0654A}
+@media(prefers-color-scheme:light){:root{--bg:#F5F6F8;--p:#fff;--p2:#EEF1F5;--line:#DDE2E8;--t:#171B22;--d:#5B6472;--cy:#0E8F7F;--am:#B4680C;--rd:#C13F26}}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t);font:16px/1.6 Inter,system-ui,sans-serif}
+h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;letter-spacing:-.01em}
+code,.m{font-family:'IBM Plex Mono',Consolas,monospace}
+a{color:var(--cy)}
+.w{max-width:920px;margin:0 auto;padding:0 24px}
+.hero{padding:60px 0 36px;border-bottom:1px solid var(--line);background:radial-gradient(600px 240px at 15% 0,rgba(94,234,212,.08),transparent 60%),radial-gradient(500px 220px at 90% 10%,rgba(245,166,35,.06),transparent 60%)}
+.eb{color:var(--d);font-size:14px;margin-bottom:12px}
+h1{font-size:clamp(34px,5vw,52px);margin-bottom:12px}
+.tag{color:var(--d);font-size:18px;max-width:60ch;margin-bottom:24px}
+.btn{display:inline-block;padding:11px 18px;border-radius:8px;font-weight:600;text-decoration:none;border:1px solid var(--cy);background:var(--cy);color:#0B1117;margin-right:10px}
+.btn.g{background:var(--p);color:var(--t);border-color:var(--line)}
+.toc{background:var(--p);border:1px solid var(--line);border-radius:10px;padding:22px 26px;margin:36px 0}
+.toc h2{font-size:14px;color:var(--d);margin-bottom:10px}
+.toc ol{padding-left:20px;columns:2;column-gap:32px}
+.toc li{margin-bottom:6px}
+.toc a{color:var(--t);text-decoration:none}.toc a:hover{color:var(--cy)}
+section{padding:44px 0;border-bottom:1px solid var(--line)}
+section:last-of-type{border:0}
+h2{font-size:26px;margin-bottom:16px}
+h3{font-size:16px;margin:20px 0 6px}
+p,ul{color:var(--d);max-width:72ch;margin-bottom:12px}
+ul{padding-left:20px}li{margin-bottom:6px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.card{background:var(--p);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 4px}.card p{margin:0;font-size:14.5px}
+.dia{background:var(--p);border:1px solid var(--line);border-radius:10px;padding:16px 8px;margin:16px 0;overflow-x:auto}
+.dia svg{display:block;min-width:700px;width:100%;height:auto}
+.bx{fill:var(--p2);stroke:var(--line)}.tx{fill:var(--t);font:600 12px Inter,sans-serif}.sx{fill:var(--d);font:11px Inter,sans-serif}.mx{fill:var(--t);font:12px 'IBM Plex Mono',monospace}
+table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:14.5px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--d);font-size:13px}
+.ok{color:var(--cy)}.bad{color:var(--rd)}
+pre{background:var(--p2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:13.5px;margin:8px 0 12px}
+.tbl{overflow-x:auto}
+.note{border-left:3px solid var(--am);background:var(--p);padding:12px 16px;border-radius:0 8px 8px 0;color:var(--d);max-width:72ch}
+footer{padding:32px 0 44px;text-align:center;color:var(--d);font-size:14px}
+@media(max-width:600px){.toc ol{columns:1}.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="w">
+
+<div class="hero">
+  <div class="eb">Documentation · Network Security Tool · Windows · Python · Streamlit</div>
+  <h1>exIPcheck</h1>
+  <p class="tag">Checks who your computer is talking to on the internet, looks each public IP up on VirusTotal, and shows the results on an online dashboard.</p>
+  <a class="btn" href="https://exipcheck.streamlit.app/" target="_blank" rel="noopener">Open live dashboard ↗</a>
+  <a class="btn g" href="#how-it-works">How it works</a>
+</div>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#configuration">Configuration</a></li>
+    <li><a href="#output-files">Output Files</a></li>
+    <li><a href="#security">Security and Privacy</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+    <li><a href="#limitations">Limitations and Roadmap</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>Every device is constantly talking to remote servers. Most of it is normal (updates, websites, cloud apps), but it is rarely visible. exIPcheck reads your ESTABLISHED connections with <code>netstat -ano</code>, keeps only public internet addresses, and asks VirusTotal whether any security vendor has flagged each one and which country it is registered in.</p>
+  <p>Everything lives in one Python file, <code>netstat_ano.py</code>. Your PC scans and pushes the results to GitHub; a Streamlit dashboard in the cloud displays them.</p>
+</section>
+
+<section id="features">
+  <h2>Features</h2>
+  <div class="g2">
+    <div class="card"><h3>Live connection capture</h3><p>Uses built-in <code>netstat -ano</code>. No administrator rights needed.</p></div>
+    <div class="card"><h3>Public IP filtering</h3><p>Drops private, loopback and link-local addresses. IPv4 and IPv6.</p></div>
+    <div class="card"><h3>Reputation and country</h3><p>Malicious and suspicious counts plus registered country, via VirusTotal API v3.</p></div>
+    <div class="card"><h3>Quota-friendly</h3><p>Each IP is cached and re-checked only after a week, so only new IPs cost a request.</p></div>
+    <div class="card"><h3>24-hour history</h3><p>Shows every IP seen in the last 24 hours, flagged ones first.</p></div>
+    <div class="card"><h3>Runs by itself</h3><p>One command sets up a scan every 15 minutes, and results are pushed to GitHub only when they change.</p></div>
+  </div>
+</section>
+
+<section id="how-it-works">
+  <h2>How It Works</h2>
+  <p>Streamlit Cloud runs on a remote server, so it cannot see your computer's connections. The work is split in two: your PC scans, the cloud only displays.</p>
+  <div class="dia">
+    <svg viewBox="0 0 990 150" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0L6,3L0,6Z" fill="#8B97A8"/></marker></defs>
+      <text x="10" y="22" class="sx">YOUR PC · scan mode</text><line x1="10" y1="32" x2="648" y2="32" stroke="#5EEAD4" stroke-width="2"/>
+      <text x="674" y="22" class="sx">CLOUD · dashboard mode</text><line x1="674" y1="32" x2="980" y2="32" stroke="#F5A623" stroke-width="2"/>
+      <g><rect class="bx" x="10" y="50" width="140" height="70" rx="10"/><text x="80" y="80" text-anchor="middle" class="mx">netstat -ano</text><text x="80" y="100" text-anchor="middle" class="sx">Capture connections</text></g>
+      <path d="M150,85H176" stroke="#8B97A8" stroke-width="2" marker-end="url(#ar)"/>
+      <g><rect class="bx" x="176" y="50" width="140" height="70" rx="10"/><text x="246" y="80" text-anchor="middle" class="tx">Filter</text><text x="246" y="100" text-anchor="middle" class="sx">Public IPs only</text></g>
+      <path d="M316,85H342" stroke="#8B97A8" stroke-width="2" marker-end="url(#ar)"/>
+      <g><rect class="bx" x="342" y="50" width="140" height="70" rx="10" style="stroke:#5EEAD4"/><text x="412" y="80" text-anchor="middle" class="tx">VirusTotal + cache</text><text x="412" y="100" text-anchor="middle" class="sx">Reputation + country</text></g>
+      <path d="M482,85H508" stroke="#8B97A8" stroke-width="2" marker-end="url(#ar)"/>
+      <g><rect class="bx" x="508" y="50" width="140" height="70" rx="10"/><text x="578" y="80" text-anchor="middle" class="mx">status.txt</text><text x="578" y="100" text-anchor="middle" class="sx">Results table</text></g>
+      <path d="M648,85H674" stroke="#8B97A8" stroke-width="2" marker-end="url(#ar)"/>
+      <g><rect class="bx" x="674" y="50" width="140" height="70" rx="10"/><text x="744" y="80" text-anchor="middle" class="tx">GitHub</text><text x="744" y="100" text-anchor="middle" class="sx">git push</text></g>
+      <path d="M814,85H840" stroke="#8B97A8" stroke-width="2" marker-end="url(#ar)"/>
+      <g><rect class="bx" x="840" y="50" width="140" height="70" rx="10" style="stroke:#F5A623"/><text x="910" y="80" text-anchor="middle" class="tx">Dashboard</text><text x="910" y="100" text-anchor="middle" class="sx">Streamlit, reads file</text></g>
+    </svg>
+  </div>
+  <p>The same file decides its mode from how you run it:</p>
+  <div class="tbl"><table>
+    <tr><th>Run</th><th>Mode</th><th>What it does</th></tr>
+    <tr><td><code>python netstat_ano.py</code></td><td>Scan</td><td>Scans, updates <code>foreign_ip_status.txt</code>, pushes to GitHub</td></tr>
+    <tr><td><code>streamlit run netstat_ano.py</code></td><td>Dashboard</td><td>Reads the file and shows it as a table. Never scans.</td></tr>
+  </table></div>
+</section>
+
+<section id="usage">
+  <h2>Usage</h2>
+  <div class="tbl"><table>
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><code>python netstat_ano.py</code></td><td>Scan once, update the results file, push to GitHub</td></tr>
+    <tr><td><code>python netstat_ano.py --loop</code></td><td>Scan every 15 minutes in the open terminal (Ctrl+C to stop)</td></tr>
+    <tr><td><code>python netstat_ano.py --install</code></td><td>Create a Task Scheduler job that scans every 15 minutes</td></tr>
+    <tr><td><code>python netstat_ano.py --uninstall</code></td><td>Remove that scheduled job</td></tr>
+    <tr><td><code>streamlit run netstat_ano.py</code></td><td>Open the dashboard in your browser</td></tr>
+  </table></div>
+  <p class="note">The scheduled task runs under your Windows account: it works while you are signed in (a locked screen counts), and not while you are signed out or the PC is off or asleep. On a laptop, untick the battery-power restrictions on the task's Conditions tab in Task Scheduler.</p>
+</section>
+
+<section id="configuration">
+  <h2>Configuration</h2>
+  <p>Settings sit at the top of <code>netstat_ano.py</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>Setting</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>RECHECK_AFTER_DAYS</code></td><td>7</td><td>Look an IP up again after this many days</td></tr>
+    <tr><td><code>SHOW_LAST_HOURS</code></td><td>24</td><td>Show IPs seen within this many hours</td></tr>
+    <tr><td><code>MAX_LOOKUPS_PER_RUN</code></td><td>20</td><td>Cap on new VirusTotal lookups per scan</td></tr>
+    <tr><td><code>WAIT_BETWEEN_LOOKUPS</code></td><td>16</td><td>Seconds between lookups (free tier: about 4 per minute)</td></tr>
+    <tr><td><code>SCAN_EVERY_MINUTES</code></td><td>15</td><td>Interval for <code>--loop</code> and <code>--install</code> (re-run <code>--install</code> after changing)</td></tr>
+  </table></div>
+</section>
+
+<section id="output-files">
+  <h2>Output Files</h2>
+  <div class="tbl"><table>
+    <tr><th>File</th><th>Pushed?</th><th>Purpose</th></tr>
+    <tr><td><code>foreign_ip_status.txt</code></td><td>Yes</td><td>Results table shown on the dashboard</td></tr>
+    <tr><td><code>ip_cache.json</code></td><td>No</td><td>Remembers past VirusTotal answers and last-seen times</td></tr>
+    <tr><td><code>scan_log.txt</code></td><td>No</td><td>One line per run, for troubleshooting</td></tr>
+  </table></div>
+  <p>The script only ever stages <code>foreign_ip_status.txt</code>. As a safeguard, add <code>ip_cache.json</code> and <code>scan_log.txt</code> to a <code>.gitignore</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>IP Address</th><th>Country</th><th>Malicious</th><th>Suspicious</th><th>Status</th></tr>
+    <tr><td class="m">185.220.101.5</td><td>NL</td><td>12</td><td>3</td><td class="bad">FLAGGED</td></tr>
+    <tr><td class="m">104.18.32.9</td><td>US</td><td>0</td><td>0</td><td class="ok">Clean</td></tr>
+    <tr><td class="m">2606:4700:4700::1111</td><td>?</td><td>?</td><td>?</td><td>Unchecked</td></tr>
+  </table></div>
+  <p><strong>Unchecked</strong> means the lookup has not succeeded yet (for example a rate limit was hit); it is retried on the next scan.</p>
+</section>
+
+<section id="security">
+  <h2>Security and Privacy</h2>
+  <ul>
+    <li><strong>Never commit your API key.</strong> Keep it in the <code>VT_API_KEY</code> environment variable. If it is ever exposed, generate a new one on your VirusTotal profile.</li>
+    <li><strong>Your results are public if your repo or dashboard is.</strong> The table lists the internet addresses your computer connects to. Consider a private repository, and restrict viewers in the app's sharing settings.</li>
+    <li><strong>A flag is a signal, not a verdict.</strong> Results can include false positives, and shared hosting or CDN addresses can inherit a bad reputation. Investigate; do not assume compromise.</li>
+    <li>Only monitor machines you own or are authorised to monitor. This tool is for awareness: it blocks nothing and does not replace endpoint protection.</li>
+  </ul>
+</section>
+
+<section id="troubleshooting">
+  <h2>Troubleshooting</h2>
+  <p>Start with <code>scan_log.txt</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>Symptom</th><th>Cause and fix</th></tr>
+    <tr><td><code>VT_API_KEY environment variable is not set</code></td><td>The script cannot see your key. Run <code>setx</code>, then reopen the terminal. In PowerShell, <code>%VT_API_KEY%</code> does not work; use <code>$env:VT_API_KEY.Length</code>.</td></tr>
+    <tr><td><code>Lookup failed (HTTP 401)</code></td><td>VirusTotal rejected the key, often a placeholder or typo. Set the real key.</td></tr>
+    <tr><td>HTTP 429 / rate limit</td><td>Free-tier limit hit. Remaining IPs are checked on the next scan.</td></tr>
+    <tr><td><code>Git push FAILED ... rejected (fetch first)</code></td><td>GitHub has commits your PC lacks. Use the latest script (it pulls before pushing) or run <code>git pull --rebase --autostash origin main</code> once.</td></tr>
+    <tr><td>Vim opens during a manual <code>git pull</code></td><td>Press <code>Esc</code>, type <code>:wq</code>, press Enter. To avoid it: <code>git config --global core.editor notepad</code>.</td></tr>
+    <tr><td>Dashboard says "No data yet"</td><td>Run a scan first and make sure <code>foreign_ip_status.txt</code> is committed.</td></tr>
+    <tr><td>Dashboard is out of date</td><td>Check the log says "Pushed", the PC is on and signed in, and Streamlit has finished redeploying (a minute or two).</td></tr>
+  </table></div>
+</section>
+
+<section id="limitations">
+  <h2>Limitations and Roadmap</h2>
+  <ul>
+    <li>Windows only: it relies on <code>netstat -ano</code> output and Task Scheduler.</li>
+    <li>The PC must be on and signed in for the dashboard to stay current.</li>
+    <li>VirusTotal's free tier has per-minute and daily quotas; check their current limits.</li>
+    <li>Only ESTABLISHED TCP connections are captured, so very short-lived connections between scans can be missed.</li>
+    <li>Ideas: email or chat alerts for new flagged IPs, Linux and macOS support, process names per connection, history charts.</li>
+  </ul>
+</section>
+
+<footer>Built by Rijwan · Master of Cybersecurity, Charles Darwin University · <a href="https://exipcheck.streamlit.app/" target="_blank" rel="noopener">Live dashboard ↗</a></footer>
+</div>
+</body>
+</html>
