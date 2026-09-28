@@ -1,11 +1,14 @@
 IP Address                              Country   Malicious  Suspicious  Status      
 -------------------------------------------------------------------------------------
 101.47.154.32                           SG        1          0           FLAGGED     
+151.101.130.133                         US        1          0           FLAGGED     
 4.150.223.101                           ?         ?          ?           Unchecked   
 72.154.7.110                            ?         ?          ?           Unchecked   
 101.47.154.30                           SG        0          0           Clean       
 104.18.39.21                            Unknown   0          0           Clean       
+104.18.87.42                            Unknown   0          0           Clean       
 104.215.40.100                          JP        0          0           Clean       
+108.158.20.64                           US        0          0           Clean       
 13.107.5.93                             US        0          0           Clean       
 140.82.112.22                           US        0          0           Clean       
 140.82.113.26                           US        0          0           Clean       
@@ -20,15 +23,19 @@ IP Address                              Country   Malicious  Suspicious  Status
 172.172.255.217                         US        0          0           Clean       
 172.64.148.235                          Unknown   0          0           Clean       
 172.64.155.209                          Unknown   0          0           Clean       
+18.67.110.38                            US        0          0           Clean       
 18.97.36.49                             US        0          0           Clean       
 18.97.36.66                             US        0          0           Clean       
 185.199.109.133                         US        0          0           Clean       
+199.232.138.133                         AU        0          0           Clean       
 199.232.138.137                         AU        0          0           Clean       
 20.42.65.89                             US        0          0           Clean       
+20.42.72.131                            US        0          0           Clean       
 20.42.73.25                             US        0          0           Clean       
 20.89.1.11                              JP        0          0           Clean       
 23.33.238.140                           AU        0          0           Clean       
 23.98.224.13                            US        0          0           Clean       
+3.175.115.44                            US        0          0           Clean       
 34.120.108.227                          US        0          0           Clean       
 35.201.127.49                           US        0          0           Clean       
 35.237.69.59                            US        0          0           Clean       
@@ -43,6 +50,7 @@ IP Address                              Country   Malicious  Suspicious  Status
 52.123.129.14                           US        0          0           Clean       
 52.168.117.169                          US        0          0           Clean       
 52.175.141.53                           JP        0          0           Clean       
+54.191.237.169                          US        0          0           Clean       
 72.154.7.96                             US        0          0           Clean       
 72.154.7.98                             US        0          0           Clean       
 91.108.56.182                           SG        0          0           Clean       
