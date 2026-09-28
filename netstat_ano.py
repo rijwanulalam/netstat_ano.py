@@ -1,52 +1,90 @@
 """
-ip_dashboard.py
+netstat_ano.py  -  EVERYTHING in ONE file
 
-An all-in-one Streamlit app that:
-1. Runs netstat -ano to find ESTABLISHED connections.
-2. Looks up each public foreign IP on VirusTotal.
-3. Saves the results to "foreign_ip_status.txt" (one row per IP).
-4. Reads that same file back in, LINE BY LINE, and displays it as a
-   table/dashboard in the browser.
+On your PC (scan mode):
+    python netstat_ano.py                 scan once, update the file, push to GitHub
+    python netstat_ano.py --loop          keep scanning every 15 minutes (leave the window open)
+    python netstat_ano.py --install       set up automatic scanning every 15 minutes
+                                          (Windows Task Scheduler, no window needed)
+    python netstat_ano.py --uninstall     remove that automatic scan
 
-Before running this:
-1. pip install streamlit requests
-2. Get a free API key from https://www.virustotal.com and paste it into
-   the API_KEY variable below.
-3. Run with:
-       streamlit run ip_dashboard.py
-   (Run your terminal as Administrator first, since netstat needs that.)
+In the browser (dashboard mode):
+    streamlit run netstat_ano.py          shows foreign_ip_status.txt as a table.
+                                          This is what Streamlit Cloud runs online.
+
+The file works out which mode to use by itself.
+
+Setup (once, on your PC):
+  - pip install requests streamlit
+  - Keep this file inside your git repo folder.
+  - Save your VirusTotal key as an environment variable (not in the code):
+        setx VT_API_KEY "your_key_here"
+    then close and reopen your terminal.
+    $env:VT_API_KEY = "126d8d6c1ad85662aa55f46f0a9a3b0e46df995e1d101a66830fcebdeb3b2981"
+    setx VT_API_KEY "126d8d6c1ad85662aa55f46f0a9a3b0e46df995e1d101a66830fcebdeb3b2981"
 """
 
-import subprocess
 import ipaddress
-import time
-import requests
-import streamlit as st
+import json
 import os
+import subprocess
+import sys
+import time
+from datetime import datetime, timedelta
 
 # -----------------------------------------------------------------------
-# STEP 0: Settings
+# Settings
 # -----------------------------------------------------------------------
-API_KEY = "126d8d6c1ad85662aa55f46f0a9a3b0e46df995e1d101a66830fcebdeb3b2981"
-OUTPUT_FILE_NAME = "foreign_ip_status.txt"
-WAIT_BETWEEN_REQUESTS = 16  # seconds, to respect VirusTotal's free rate limit
 
-# These must match on both the "writing" side and the "reading" side, so
-# the columns line up correctly when we slice the text back apart later.
-COL_WIDTHS = {"ip": 16, "country": 10, "malicious": 11, "suspicious": 12, "status": 15}
+# Always use the folder this script lives in, so it works no matter where
+# Task Scheduler starts it from.
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_FILE = os.path.join(SCRIPT_DIR, "foreign_ip_status.txt")
+CACHE_FILE = os.path.join(SCRIPT_DIR, "ip_cache.json")   # stays local
+LOG_FILE = os.path.join(SCRIPT_DIR, "scan_log.txt")      # stays local
+
+API_KEY = os.environ.get("VT_API_KEY")
+
+RECHECK_AFTER_DAYS = 7     # re-check an IP on VirusTotal after this long
+SHOW_LAST_HOURS = 24       # show IPs seen within this many hours
+MAX_LOOKUPS_PER_RUN = 20   # keeps us far below the free daily quota
+WAIT_BETWEEN_LOOKUPS = 16  # free tier allows about 4 requests per minute
 
 
 # -----------------------------------------------------------------------
-# STEP 1: Run netstat and collect public foreign IPs
+# Small helpers
 # -----------------------------------------------------------------------
-def get_public_ips():
-    """Run netstat -ano and return a list of unique public foreign IPs
-    from ESTABLISHED connections."""
+
+def log(message):
+    """Add a timestamped line to scan_log.txt so you can see what happened."""
+    line = f"{datetime.now():%Y-%m-%d %H:%M:%S}  {message}"
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+
+
+def load_cache():
+    """Read the saved VirusTotal results (an empty dict if there are none)."""
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    with open(CACHE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_cache(cache):
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache, f, indent=2)
+
+
+# -----------------------------------------------------------------------
+# Step 1: find public IPs from ESTABLISHED connections
+# -----------------------------------------------------------------------
+
+def get_current_public_ips():
+    """Run netstat -ano and return the set of public foreign IPs."""
     result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
-    lines = result.stdout.splitlines()
+    public_ips = set()
 
-    public_ips = []
-    for line in lines:
+    for line in result.stdout.splitlines():
         if "ESTABLISHED" not in line:
             continue
 
@@ -54,154 +92,310 @@ def get_public_ips():
         if len(columns) < 3:
             continue
 
-        foreign_address = columns[2]
-        ip, port = foreign_address.rsplit(":", 1)
+        foreign = columns[2]  # e.g. "104.18.32.9:443" or "[2606:4700::1]:443"
+
+        # Separate the IP from the port (IPv6 addresses are in [brackets]).
+        if foreign.startswith("["):
+            ip = foreign[1:foreign.rindex("]")]
+        else:
+            ip = foreign.rsplit(":", 1)[0]
+        ip = ip.split("%")[0]  # remove an IPv6 zone id like "%12" if present
 
         try:
-            ip_object = ipaddress.ip_address(ip)
-            if ip_object.is_private:
-                continue
+            # is_global is True only for real internet addresses (not
+            # private, loopback, link-local or reserved ranges).
+            if ipaddress.ip_address(ip).is_global:
+                public_ips.add(ip)
         except ValueError:
             continue
-
-        if ip not in public_ips:
-            public_ips.append(ip)
 
     return public_ips
 
 
 # -----------------------------------------------------------------------
-# STEP 2: Check IPs on VirusTotal and write results to the file
+# Step 2: VirusTotal lookup (only for new or stale IPs)
 # -----------------------------------------------------------------------
-def scan_and_save(public_ips, progress_bar):
-    """Look up each IP on VirusTotal and write one padded row per IP into
-    OUTPUT_FILE_NAME. Column widths come from COL_WIDTHS so the file can
-    be read back in cleanly afterward."""
-    headers = {"x-apikey": API_KEY}
 
-    w = COL_WIDTHS  # short alias, just to keep the line below readable
-    header_row = (
-        f"{'IP Address':<{w['ip']}}{'Country':<{w['country']}}"
-        f"{'Malicious':<{w['malicious']}}{'Suspicious':<{w['suspicious']}}"
-        f"{'Status':<{w['status']}}"
-    )
+def needs_lookup(entry, now):
+    """True if we've never checked this IP, or the last check is old."""
+    if "checked_at" not in entry:
+        return True
+    checked_at = datetime.fromisoformat(entry["checked_at"])
+    return now - checked_at > timedelta(days=RECHECK_AFTER_DAYS)
 
-    with open(OUTPUT_FILE_NAME, "w", encoding="utf-8") as output_file:
-        output_file.write(header_row + "\n")
-        output_file.write("-" * len(header_row) + "\n")
 
-        for index, ip in enumerate(public_ips):
-            url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
-            response = requests.get(url, headers=headers)
+def lookup_virustotal(ip):
+    """Ask VirusTotal about one IP. Returns (result_dict_or_None, status_code)."""
+    import requests  # only needed when scanning locally
 
-            if response.status_code != 200:
-                country, malicious, suspicious = "?", "?", "?"
-                status = f"Error {response.status_code}"
-            else:
-                data = response.json()
-                attributes = data["data"]["attributes"]
-                stats = attributes.get("last_analysis_stats", {})
-                malicious = stats.get("malicious", 0)
-                suspicious = stats.get("suspicious", 0)
-                country = attributes.get("country", "Unknown")
-                status = "FLAGGED" if (malicious > 0 or suspicious > 0) else "Clean"
+    url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
+    response = requests.get(url, headers={"x-apikey": API_KEY}, timeout=20)
 
-            row = (
-                f"{ip:<{w['ip']}}{country:<{w['country']}}"
-                f"{malicious:<{w['malicious']}}{suspicious:<{w['suspicious']}}"
-                f"{status:<{w['status']}}"
-            )
-            output_file.write(row + "\n")
+    if response.status_code != 200:
+        return None, response.status_code
 
-            # Update the on-screen progress bar as we go.
-            progress_bar.progress((index + 1) / len(public_ips), text=f"Checked {ip}")
-
-            if index < len(public_ips) - 1:
-                time.sleep(WAIT_BETWEEN_REQUESTS)
+    attributes = response.json()["data"]["attributes"]
+    stats = attributes.get("last_analysis_stats", {})
+    result = {
+        "country": attributes.get("country", "Unknown"),
+        "malicious": stats.get("malicious", 0),
+        "suspicious": stats.get("suspicious", 0),
+    }
+    return result, 200
 
 
 # -----------------------------------------------------------------------
-# STEP 3: Read the saved file back in, LINE BY LINE, and parse it
+# Step 3: write the results table
 # -----------------------------------------------------------------------
-def read_results_from_file():
-    """Open OUTPUT_FILE_NAME and read it back line by line, turning each
-    data row into a dictionary using the same column widths we wrote it
-    with. Returns a list of dictionaries — one per IP."""
+
+def write_results_file(cache, now):
+    """Write one row per recently seen IP, flagged ones first."""
+    cutoff = now - timedelta(hours=SHOW_LAST_HOURS)
     rows = []
 
-    if not os.path.exists(OUTPUT_FILE_NAME):
-        return rows  # no file yet, nothing to read
+    for ip, entry in cache.items():
+        last_seen = entry.get("last_seen")
+        if not last_seen or datetime.fromisoformat(last_seen) < cutoff:
+            continue  # not seen recently, leave it out of the table
 
-    w = COL_WIDTHS
+        if "checked_at" not in entry:
+            country, malicious, suspicious, status = "?", "?", "?", "Unchecked"
+        else:
+            country = entry["country"]
+            malicious = entry["malicious"]
+            suspicious = entry["suspicious"]
+            status = "FLAGGED" if (malicious > 0 or suspicious > 0) else "Clean"
 
-    with open(OUTPUT_FILE_NAME, "r", encoding="utf-8") as f:
-        all_lines = f.readlines()
+        rows.append((ip, country, malicious, suspicious, status))
 
-    # Skip the first two lines (the header row and the "----" divider).
-    data_lines = all_lines[2:]
+    # FLAGGED first, then Unchecked, then Clean; IP order within each group.
+    order = {"FLAGGED": 0, "Unchecked": 1, "Clean": 2}
+    rows.sort(key=lambda r: (order[r[4]], r[0]))
 
-    for line in data_lines:
-        line = line.rstrip("\n")
+    header = f"{'IP Address':<40}{'Country':<10}{'Malicious':<11}{'Suspicious':<12}{'Status':<12}"
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(header + "\n")
+        f.write("-" * len(header) + "\n")
+        for ip, country, malicious, suspicious, status in rows:
+            f.write(f"{ip:<40}{country:<10}{str(malicious):<11}{str(suspicious):<12}{status:<12}\n")
+
+    return len(rows)
+
+
+# -----------------------------------------------------------------------
+# Step 4: push to GitHub (only if the file changed)
+# -----------------------------------------------------------------------
+
+def run_git(*args):
+    return subprocess.run(["git", *args], cwd=SCRIPT_DIR, capture_output=True, text=True)
+
+
+def push_to_github(now):
+    # Only this one file is ever added, so your API key, cache and log are
+    # never committed by accident.
+    run_git("add", "foreign_ip_status.txt")
+
+    # "diff --cached --quiet" exits with 0 when there is nothing new to commit.
+    if run_git("diff", "--cached", "--quiet").returncode == 0:
+        log("No changes to push.")
+        return
+
+    run_git("commit", "-m", f"Update scan {now:%Y-%m-%d %H:%M}")
+    result = run_git("push")
+    if result.returncode == 0:
+        log("Pushed new results to GitHub.")
+    else:
+        log(f"Git push FAILED: {result.stderr.strip()}")
+
+
+# -----------------------------------------------------------------------
+# SCAN mode
+# -----------------------------------------------------------------------
+
+def run_scan():
+    if not API_KEY:
+        log("ERROR: VT_API_KEY environment variable is not set.")
+        sys.exit(1)
+
+    now = datetime.now()
+    cache = load_cache()
+
+    # Record every public IP we can see right now.
+    current_ips = get_current_public_ips()
+    for ip in current_ips:
+        cache.setdefault(ip, {})["last_seen"] = now.isoformat(timespec="seconds")
+
+    # Only look up IPs that are new or stale (capped per run).
+    to_check = [ip for ip in sorted(current_ips) if needs_lookup(cache[ip], now)]
+    to_check = to_check[:MAX_LOOKUPS_PER_RUN]
+
+    for index, ip in enumerate(to_check):
+        result, status_code = lookup_virustotal(ip)
+
+        if result:
+            cache[ip].update(result)
+            cache[ip]["checked_at"] = now.isoformat(timespec="seconds")
+        elif status_code == 429:
+            log("VirusTotal rate limit reached; the rest will be checked next run.")
+            break
+        else:
+            log(f"Lookup failed for {ip} (HTTP {status_code}); will retry next run.")
+
+        if index < len(to_check) - 1:
+            time.sleep(WAIT_BETWEEN_LOOKUPS)
+
+    save_cache(cache)
+    row_count = write_results_file(cache, now)
+    log(f"Scan done: {len(current_ips)} public IPs now, {len(to_check)} looked up, {row_count} rows written.")
+
+    push_to_github(now)
+
+
+# -----------------------------------------------------------------------
+# DASHBOARD mode
+# -----------------------------------------------------------------------
+
+def read_results_from_file():
+    """Read foreign_ip_status.txt line by line into a list of dictionaries."""
+    rows = []
+    if not os.path.exists(OUTPUT_FILE):
+        return rows
+
+    with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    # Skip the header row and the "-----" divider line.
+    for line in lines[2:]:
         if not line.strip():
-            continue  # skip any blank lines
+            continue
 
-        # Slice the fixed-width columns back apart using the same widths
-        # we used when writing the file. .strip() removes the padding
-        # spaces we added for alignment.
-        pos = 0
-        ip = line[pos: pos + w["ip"]].strip(); pos += w["ip"]
-        country = line[pos: pos + w["country"]].strip(); pos += w["country"]
-        malicious = line[pos: pos + w["malicious"]].strip(); pos += w["malicious"]
-        suspicious = line[pos: pos + w["suspicious"]].strip(); pos += w["suspicious"]
-        status = line[pos: pos + w["status"]].strip()
+        # Split into at most 5 pieces; this works whatever the column widths.
+        parts = line.split(None, 4)
+        if len(parts) < 5:
+            continue
 
+        ip, country, malicious, suspicious, status = parts
         rows.append({
             "ip": ip,
             "country": country,
             "malicious": malicious,
             "suspicious": suspicious,
-            "status": status,
+            "status": status.strip(),
         })
-
     return rows
 
 
-# -----------------------------------------------------------------------
-# STEP 4: The Streamlit page itself
-# -----------------------------------------------------------------------
-st.set_page_config(page_title="IP Reputation Dashboard", layout="wide")
-st.title("🌐 Foreign IP Reputation Dashboard")
-st.write("Checks your computer's active network connections against VirusTotal.")
+def run_dashboard():
+    import streamlit as st
 
-if st.button("Run scan now"):
-    public_ips = get_public_ips()
+    st.set_page_config(page_title="IP Reputation Dashboard", layout="wide")
+    st.title("🌐 Foreign IP Reputation Dashboard")
 
-    if not public_ips:
-        st.warning("No public ESTABLISHED connections found.")
-    else:
-        st.write(f"Found {len(public_ips)} public IP(s). Checking each one...")
-        progress_bar = st.progress(0, text="Starting...")
-        scan_and_save(public_ips, progress_bar)
-        st.success("Scan complete! Results saved to " + OUTPUT_FILE_NAME)
+    results = read_results_from_file()
 
-st.divider()
+    if not results:
+        st.warning("No data yet. Run 'python netstat_ano.py' on your PC to create foreign_ip_status.txt.")
+        return
 
-# Read whatever is currently saved in the file (from this run or a past one)
-# and display it as a table, line by line.
-results = read_results_from_file()
-
-if not results:
-    st.info("No results yet. Click 'Run scan now' above to check your connections.")
-else:
-    flagged_count = sum(1 for r in results if r["status"] == "FLAGGED")
-    clean_count = sum(1 for r in results if r["status"] == "Clean")
+    flagged = sum(1 for r in results if r["status"] == "FLAGGED")
+    clean = sum(1 for r in results if r["status"] == "Clean")
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total IPs", len(results))
-    col2.metric("Flagged", flagged_count)
-    col3.metric("Clean", clean_count)
+    col1.metric("IPs (last 24h)", len(results))
+    col2.metric("Flagged", flagged)
+    col3.metric("Clean", clean)
 
     st.subheader("Results")
-
-    # Streamlit can display a list of dictionaries directly as a table.
     st.table(results)
+
+    if st.button("Refresh"):
+        st.rerun()
+
+
+# -----------------------------------------------------------------------
+# Pick the mode
+# -----------------------------------------------------------------------
+
+def running_inside_streamlit():
+    """True when Streamlit is running this file (streamlit run ...)."""
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+    except Exception:
+        return False  # Streamlit isn't installed, so we must be in scan mode
+    try:
+        return get_script_run_ctx(suppress_warning=True) is not None
+    except TypeError:
+        return get_script_run_ctx() is not None
+
+
+# -----------------------------------------------------------------------
+# Built-in scheduling (so you don't need any other file or tool)
+# -----------------------------------------------------------------------
+
+TASK_NAME = "exIPcheck scan"
+SCAN_EVERY_MINUTES = 15
+
+
+def install_schedule():
+    """Create a Windows Task Scheduler job that runs this script's scan."""
+    if os.name != "nt":
+        print("--install only works on Windows (it uses Task Scheduler).")
+        return
+
+    # pythonw.exe runs Python without opening a console window each time.
+    python_exe = sys.executable
+    pythonw_exe = os.path.join(os.path.dirname(python_exe), "pythonw.exe")
+    if os.path.exists(pythonw_exe):
+        python_exe = pythonw_exe
+
+    script_path = os.path.abspath(__file__)
+    command = f'"{python_exe}" "{script_path}"'
+
+    result = subprocess.run(
+        ["schtasks", "/Create", "/F", "/SC", "MINUTE", "/MO", str(SCAN_EVERY_MINUTES),
+         "/TN", TASK_NAME, "/TR", command],
+        capture_output=True, text=True,
+    )
+    print(result.stdout.strip() or result.stderr.strip())
+    if result.returncode == 0:
+        print(f"Done. A scan will now run every {SCAN_EVERY_MINUTES} minutes while you are logged in.")
+
+
+def uninstall_schedule():
+    if os.name != "nt":
+        print("--uninstall only works on Windows.")
+        return
+    result = subprocess.run(["schtasks", "/Delete", "/F", "/TN", TASK_NAME],
+                            capture_output=True, text=True)
+    print(result.stdout.strip() or result.stderr.strip())
+
+
+def run_loop():
+    """Scan, wait, repeat. Press Ctrl+C to stop."""
+    print(f"Scanning every {SCAN_EVERY_MINUTES} minutes. Press Ctrl+C to stop.")
+    while True:
+        try:
+            run_scan()
+        except SystemExit:
+            raise  # e.g. missing API key: stop instead of retrying forever
+        except Exception as error:
+            log(f"Scan crashed: {error}")  # keep looping; try again next time
+        time.sleep(SCAN_EVERY_MINUTES * 60)
+
+
+def main():
+    option = sys.argv[1] if len(sys.argv) > 1 else ""
+    if option == "--install":
+        install_schedule()
+    elif option == "--uninstall":
+        uninstall_schedule()
+    elif option == "--loop":
+        run_loop()
+    else:
+        run_scan()
+
+
+if running_inside_streamlit():
+    run_dashboard()
+elif __name__ == "__main__":
+    main()
