@@ -1,15 +1,19 @@
 IP Address                              Country   Malicious  Suspicious  Status      
 -------------------------------------------------------------------------------------
-101.47.154.32                           ?         ?          ?           Unchecked   
+101.47.154.32                           SG        1          0           FLAGGED     
 104.18.39.21                            ?         ?          ?           Unchecked   
-140.82.114.25                           ?         ?          ?           Unchecked   
-172.172.255.217                         ?         ?          ?           Unchecked   
-18.97.36.66                             ?         ?          ?           Unchecked   
-35.201.127.49                           ?         ?          ?           Unchecked   
 35.237.69.59                            ?         ?          ?           Unchecked   
 4.150.223.101                           ?         ?          ?           Unchecked   
-4.224.116.131                           ?         ?          ?           Unchecked   
-4.237.22.41                             ?         ?          ?           Unchecked   
-52.175.141.53                           ?         ?          ?           Unchecked   
 72.154.7.110                            ?         ?          ?           Unchecked   
-91.108.56.182                           ?         ?          ?           Unchecked   
+140.82.114.25                           US        0          0           Clean       
+150.171.109.25                          US        0          0           Clean       
+172.172.255.217                         US        0          0           Clean       
+172.64.148.235                          Unknown   0          0           Clean       
+18.97.36.66                             US        0          0           Clean       
+20.42.73.25                             US        0          0           Clean       
+20.89.1.11                              JP        0          0           Clean       
+35.201.127.49                           US        0          0           Clean       
+4.224.116.131                           IN        0          0           Clean       
+4.237.22.41                             AU        0          0           Clean       
+52.175.141.53                           JP        0          0           Clean       
+91.108.56.182                           SG        0          0           Clean       
